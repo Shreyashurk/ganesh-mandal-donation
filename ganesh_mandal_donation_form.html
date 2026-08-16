@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shree Ganesh Mandal - Donation Form</title>
+<title>Shree Sai Ganesh Utsav Mandal - Donation Form</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -117,17 +117,23 @@
   </div>
 
   <form id="donationForm">
-    <label for="donorName">Donor Name</label>
+    <label for="donorName">Donor Name / देणगीदाराचे नाव</label>
     <input type="text" id="donorName" name="donorName" placeholder="Enter full name" required>
 
-    <label for="amount">Amount (₹)</label>
+    <label for="amount">Amount (₹) / रक्कम (₹)</label>
     <div class="rupee-wrap">
       <span>₹</span>
       <input type="number" id="amount" name="amount" placeholder="0" min="1" step="1" required>
     </div>
 
-    <label for="donationDate">Date</label>
+    <label for="donationDate">Date / दिनांक</label>
     <input type="date" id="donationDate" name="donationDate" required>
+
+    <label for="pautiNo">Pauti No. / पावती क्रमांक</label>
+    <input type="text" id="pautiNo" name="pautiNo" placeholder="Enter receipt number" required>
+
+    <label for="receiverName">Receiver Name / स्वीकारणाऱ्याचे नाव</label>
+    <input type="text" id="receiverName" name="receiverName" placeholder="Enter receiver's name" required>
 
     <button type="button" id="submitBtn">Submit Donation</button>
     <div class="status" id="statusMsg"></div>
@@ -180,7 +186,9 @@
     const data = {
       donorName: document.getElementById('donorName').value.trim(),
       amount: document.getElementById('amount').value,
-      donationDate: document.getElementById('donationDate').value
+      donationDate: document.getElementById('donationDate').value,
+      pautiNo: document.getElementById('pautiNo').value.trim(),
+      receiverName: document.getElementById('receiverName').value.trim()
     };
 
     submitBtn.disabled = true;
