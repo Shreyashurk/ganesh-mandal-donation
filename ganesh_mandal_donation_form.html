@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shree Ganesh Mandal - Donation Form</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #ff9a3c 0%, #ff6b35 50%, #c1121f 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #fffaf0;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    overflow: hidden;
+    border: 3px solid #ffb703;
+  }
+  .header {
+    background: #c1121f;
+    color: #fff;
+    text-align: center;
+    padding: 22px 16px 18px;
+  }
+  .header h1 {
+    font-size: 22px;
+    letter-spacing: 0.5px;
+  }
+  .header p {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+  .om-symbol {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+  form {
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7a1f1f;
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 2px solid #ffd166;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fff;
+  }
+  input:focus {
+    border-color: #c1121f;
+  }
+  .rupee-wrap {
+    position: relative;
+  }
+  .rupee-wrap span {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a1f1f;
+    font-weight: 600;
+  }
+  .rupee-wrap input {
+    padding-left: 28px;
+  }
+  button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 13px;
+    background: #c1121f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #9d0e18; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  .status {
+    margin-top: 14px;
+    font-size: 14px;
+    text-align: center;
+    min-height: 18px;
+  }
+  .status.success { color: #2a7a2a; }
+  .status.error { color: #c1121f; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="om-symbol">🕉️</div>
+    <h1>Shree Ganesh Mandal</h1>
+    <p>Donation Collection Form</p>
+  </div>
+
+  <form id="donationForm">
+    <label for="donorName">Donor Name</label>
+    <input type="text" id="donorName" name="donorName" placeholder="Enter full name" required>
+
+    <label for="amount">Amount (₹)</label>
+    <div class="rupee-wrap">
+      <span>₹</span>
+      <input type="number" id="amount" name="amount" placeholder="0" min="1" step="1" required>
+    </div>
+
+    <label for="donationDate">Date</label>
+    <input type="date" id="donationDate" name="donationDate" required>
+
+    <button type="button" id="submitBtn">Submit Donation</button>
+    <div class="status" id="statusMsg"></div>
+  </form>
+</div>
+
+<script>
+  // Set default date to today
+  document.getElementById('donationDate').value = new Date().toISOString().split('T')[0];
+
+  const form = document.getElementById('donationForm');
+  const statusMsg = document.getElementById('statusMsg');
+  const submitBtn = document.getElementById('submitBtn');
+
+  // ---------------------------------------------------------------
+  // DIRECT SALESFORCE INTEGRATION (inline)
+  // Calls your Apex REST endpoint directly using the access token below.
+  // NOTE: This is a Salesforce SESSION access token — it expires
+  // (usually within a couple hours), so this will stop working after
+  // that and you'll need to paste a fresh token in. Also, since it's
+  // hardcoded here, anyone with this file can use it to call your org
+  // until it expires — fine for local/private testing, not for a
+  // publicly hosted page.
+  // ---------------------------------------------------------------
+  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/donation/";
+  const SF_ACCESS_TOKEN = "00DdM00000uWXkx!AQEAQF3vVr_4N8R50FVMNaRHcL1mUwhpk7XNMnl_YYYYC_KbIs_Wxs0ABV5zltF71eCEGsiFilYvvCnvu_FYTwQi8CEy26QN";
+
+  async function submitToSalesforce(data) {
+    const response = await fetch(SF_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${SF_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.success === false) {
+      throw new Error(result.error || "Submission failed");
+    }
+
+    return result;
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    if (!form.reportValidity()) return;
+
+    const data = {
+      donorName: document.getElementById('donorName').value.trim(),
+      amount: document.getElementById('amount').value,
+      donationDate: document.getElementById('donationDate').value
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    statusMsg.textContent = "";
+    statusMsg.className = "status";
+
+    try {
+      await submitToSalesforce(data);
+      statusMsg.textContent = "✅ Donation recorded successfully! Ready for next entry.";
+      statusMsg.className = "status success";
+      form.reset();
+      document.getElementById('donationDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('donorName').focus();
+      setTimeout(() => {
+        statusMsg.textContent = "";
+        statusMsg.className = "status";
+      }, 4000);
+    } catch (err) {
+      statusMsg.textContent = "❌ " + err.message;
+      statusMsg.className = "status error";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Donation";
+    }
+  });
+</script>
+
+</body>
+</html>
