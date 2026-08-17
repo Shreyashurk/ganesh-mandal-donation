@@ -150,26 +150,63 @@
 
   // ---------------------------------------------------------------
   // DIRECT SALESFORCE INTEGRATION (inline)
-  // Calls your Apex REST endpoint directly using the access token below.
-  // NOTE: This is a Salesforce SESSION access token — it expires
-  // (usually within a couple hours), so this will stop working after
-  // that and you'll need to paste a fresh token in. Also, since it's
-  // hardcoded here, anyone with this file can use it to call your org
-  // until it expires — fine for local/private testing, not for a
-  // publicly hosted page.
+  // Uses OAuth 2.0 Client Credentials Flow to fetch a fresh access
+  // token automatically if a call comes back 401 Unauthorized.
+  // NOTE: client_id/client_secret are exposed to anyone who opens
+  // this file — fine for local/private testing, not for a publicly
+  // hosted page.
   // ---------------------------------------------------------------
+  const SF_TOKEN_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/oauth2/token";
   const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/donation/";
-  const SF_ACCESS_TOKEN = "00DdM00000uWXkx!AQEAQAIwYI56RE9Z3JJHlySRRjELqgXVepxSpI8UKjrLfVqBSMh9xbMs8Z8NyvmsQgiIVJNf7iFPm5bubZMPGNnEFtxmrBWu";
+  const SF_CLIENT_ID = "3MVG9WVXk15qiz1KyJCb0e7OY9F.t0m18SQ_ONF344h.EpHIfvkcgqRgaEt3W63lnDCC2ZoCEsf1jm.Rg6KaA";
+  const SF_CLIENT_SECRET = "C690649BAE1615CE442AB5D8EEF9EC01ED919A519D313B21DBD4B44DD17F09C8";
 
-  async function submitToSalesforce(data) {
-    const response = await fetch(SF_ENDPOINT, {
+  let SF_ACCESS_TOKEN = ""; // populated on first use / refreshed on 401
+
+  async function getAccessToken() {
+    const response = await fetch(SF_TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: SF_CLIENT_ID,
+        client_secret: SF_CLIENT_SECRET
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error_description || "Failed to fetch access token");
+    }
+
+    SF_ACCESS_TOKEN = result.access_token;
+    return SF_ACCESS_TOKEN;
+  }
+
+  async function callSalesforce(data, token) {
+    return fetch(SF_ENDPOINT, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${SF_ACCESS_TOKEN}`,
+        "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(data)
     });
+  }
+
+  async function submitToSalesforce(data) {
+    if (!SF_ACCESS_TOKEN) {
+      await getAccessToken();
+    }
+
+    let response = await callSalesforce(data, SF_ACCESS_TOKEN);
+
+    // Token expired or invalid — fetch a new one and retry once
+    if (response.status === 401) {
+      await getAccessToken();
+      response = await callSalesforce(data, SF_ACCESS_TOKEN);
+    }
 
     const result = await response.json();
 
@@ -216,6 +253,5 @@
     }
   });
 </script>
-
 </body>
 </html>
