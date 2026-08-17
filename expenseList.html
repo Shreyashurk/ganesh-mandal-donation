@@ -148,25 +148,22 @@ async function loadExpenses() {
 
         let data = await response.json();
 
-        /*
-         * Your current Salesforce response is:
-         *
-         * [
-         *   "[{\"expensedate\":\"2026-08-17\", ...}]"
-         * ]
-         *
-         * Therefore we need to parse the inner JSON string.
-         */
-
-        if (Array.isArray(data) && typeof data[0] === "string") {
+        console.log("Raw API response:", data);
+        
+        if (Array.isArray(data) && data.length === 1 && typeof data[0] === "string") {
             data = JSON.parse(data[0]);
         }
-
+        
+        if (!Array.isArray(data)) {
+            throw new Error("API response is not an array");
+        }
+        
         expenses = data;
-
+        
+        console.log("Parsed expenses:", expenses);
+        
         renderExpenses(expenses);
         calculateSummary(expenses);
-
     } catch (error) {
 
         console.error(error);
@@ -186,46 +183,37 @@ async function loadExpenses() {
 
 
 function renderExpenses(records) {
-
     const tableBody = document.getElementById("expenseTableBody");
 
-    if (!records || records.length === 0) {
-
+    if (!Array.isArray(records)) {
+        console.error("Expected array but received:", records);
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="loading">
-                    No expense records found.
-                </td>
+                <td colspan="6" class="loading">Invalid expense data.</td>
             </tr>
         `;
+        return;
+    }
 
+    if (records.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="loading">No expense records found.</td>
+            </tr>
+        `;
         return;
     }
 
     tableBody.innerHTML = records.map((record, index) => {
-
         const status = getStatus(record.additionalInformation);
 
         return `
             <tr>
                 <td>${index + 1}</td>
-
-                <td class="date">
-                    ${formatDate(record.expensedate)}
-                </td>
-
-                <td class="expense-name">
-                    ${escapeHtml(record.expense)}
-                </td>
-
-                <td class="amount">
-                    ₹${Number(record.amount || 0).toLocaleString("en-IN")}
-                </td>
-
-                <td class="info">
-                    ${escapeHtml(record.additionalInformation || "-")}
-                </td>
-
+                <td class="date">${formatDate(record.expensedate)}</td>
+                <td class="expense-name">${escapeHtml(record.expense)}</td>
+                <td class="amount">₹${Number(record.amount || 0).toLocaleString("en-IN")}</td>
+                <td class="info">${escapeHtml(record.additionalInformation || "-")}</td>
                 <td>
                     <span class="status ${status.class}">
                         ${status.text}
@@ -233,11 +221,9 @@ function renderExpenses(records) {
                 </td>
             </tr>
         `;
-
     }).join("");
 }
-
-
+    
 function calculateSummary(records) {
 
     const total = records.reduce(
