@@ -4,53 +4,243 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ganesh Mandal - Expense Records</title>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, Helvetica, sans-serif; background: #f5f6fa; color: #222; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; }
-        .header { background: linear-gradient(135deg, #ff7a18, #ff4b2b); color: white; padding: 28px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(255,87,34,.2); }
-        .header h1 { font-size: 28px; margin-bottom: 8px; }
-        .header p { font-size: 14px; opacity: .9; }
-        .summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
-        .summary-card { background: white; padding: 20px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,.06); }
-        .summary-card .label { font-size: 13px; color: #777; margin-bottom: 8px; }
-        .summary-card .value { font-size: 26px; font-weight: 700; }
-        .summary-card.total .value { color: #e85d04; }
-        .table-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 18px rgba(0,0,0,.06); }
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 15px; }
-        .table-header h2 { font-size: 20px; }
-        .search-box { padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; outline: none; width: 230px; font-size: 14px; }
-        .search-box:focus { border-color: #ff6b35; }
-        .table-wrapper { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        thead { background: #fff4ed; }
-        th { text-align: left; padding: 14px 16px; font-size: 13px; color: #7a4a2d; font-weight: 600; white-space: nowrap; }
-        td { padding: 16px; border-bottom: 1px solid #eee; font-size: 14px; }
-        tbody tr:hover { background: #fffaf7; }
-        .expense-name { font-weight: 600; }
-        .date { color: #666; }
-        .amount { font-weight: 700; color: #e85d04; white-space: nowrap; }
-        .info { color: #666; max-width: 250px; }
-        .status { display: inline-block; padding: 6px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .status.paid { background: #e8f8ee; color: #16803c; }
-        .status.pending { background: #fff3cd; color: #996c00; }
-        .status.partial { background: #e8f1ff; color: #2563a6; }
-        .loading { text-align: center; padding: 40px; color: #777; }
-        .error { background: #ffe8e8; color: #c62828; padding: 14px; border-radius: 8px; margin-bottom: 15px; display: none; }
-        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
-        @media (max-width: 768px) {
-            body { padding: 12px; }
-            .header { padding: 22px; }
-            .header h1 { font-size: 23px; }
-            .summary { grid-template-columns: 1fr; }
-            .table-card { padding: 14px; }
-            .table-header { flex-direction: column; align-items: stretch; }
-            .search-box { width: 100%; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f6fa;
+            color: #222;
+            padding: 20px;
         }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff7a18, #ff4b2b);
+            color: white;
+            padding: 28px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(255,87,34,.2);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: .9;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.06);
+        }
+
+        .summary-card .label {
+            font-size: 13px;
+            color: #777;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .summary-card.total .value {
+            color: #e85d04;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.06);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            gap: 15px;
+        }
+
+        .table-header h2 {
+            font-size: 20px;
+        }
+
+        .search-box {
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            width: 230px;
+            font-size: 14px;
+        }
+
+        .search-box:focus {
+            border-color: #ff6b35;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        thead {
+            background: #fff4ed;
+        }
+
+        th {
+            text-align: left;
+            padding: 14px 16px;
+            font-size: 13px;
+            color: #7a4a2d;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background: #fffaf7;
+        }
+
+        .expense-name {
+            font-weight: 600;
+        }
+
+        .date {
+            color: #666;
+        }
+
+        .amount {
+            font-weight: 700;
+            color: #e85d04;
+            white-space: nowrap;
+        }
+
+        .info {
+            color: #666;
+            max-width: 250px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status.paid {
+            background: #e8f8ee;
+            color: #16803c;
+        }
+
+        .status.pending {
+            background: #fff3cd;
+            color: #996c00;
+        }
+
+        .status.partial {
+            background: #e8f1ff;
+            color: #2563a6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #777;
+        }
+
+        .error {
+            background: #ffe8e8;
+            color: #c62828;
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .footer {
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+
+            .header {
+                padding: 22px;
+            }
+
+            .header h1 {
+                font-size: 23px;
+            }
+
+            .summary {
+                grid-template-columns: 1fr;
+            }
+
+            .table-card {
+                padding: 14px;
+            }
+
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+
         @media (max-width: 480px) {
-            .header { border-radius: 12px; }
-            .summary-card { padding: 16px; }
-            .summary-card .value { font-size: 22px; }
+            .header {
+                border-radius: 12px;
+            }
+
+            .summary-card {
+                padding: 16px;
+            }
+
+            .summary-card .value {
+                font-size: 22px;
+            }
         }
     </style>
 </head>
@@ -65,6 +255,7 @@
     </div>
 
     <div class="summary">
+
         <div class="summary-card total">
             <div class="label">Total Expenses</div>
             <div class="value" id="totalExpenses">₹0</div>
@@ -79,6 +270,7 @@
             <div class="label">Pending Amount</div>
             <div class="value" id="pendingAmount">₹0</div>
         </div>
+
     </div>
 
     <div id="errorMessage" class="error"></div>
@@ -91,7 +283,9 @@
         </div>
 
         <div class="table-wrapper">
+
             <table>
+
                 <thead>
                     <tr>
                         <th>#</th>
@@ -105,10 +299,14 @@
 
                 <tbody id="expenseTableBody">
                     <tr>
-                        <td colspan="6" class="loading">Loading expense records...</td>
+                        <td colspan="6" class="loading">
+                            Loading expense records...
+                        </td>
                     </tr>
                 </tbody>
+
             </table>
+
         </div>
 
     </div>
@@ -123,14 +321,26 @@
 
 const API_URL = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/expenseList/";
 
-const ACCESS_TOKEN = "00DdM00000uWXkx!AQEAQAIwYI56RE9Z3JJHlySRRjELqgXVepxSpI8UKjrLfVqBSMh9xbMs8Z8NyvmsQgiIVJNf7iFPm5bubZMPGNnEFtxmrBWu";
+/*
+ * Put your current access token here for local testing only.
+ *
+ * DO NOT deploy a Salesforce access token in public HTML.
+ */
+const ACCESS_TOKEN = "YOUR_ACCESS_TOKEN";
 
 let expenses = [];
+
+
+/* ============================
+   LOAD EXPENSES
+============================ */
 
 async function loadExpenses() {
 
     const tableBody = document.getElementById("expenseTableBody");
     const errorMessage = document.getElementById("errorMessage");
+
+    errorMessage.style.display = "none";
 
     try {
 
@@ -146,27 +356,30 @@ async function loadExpenses() {
             throw new Error(`API Error: ${response.status}`);
         }
 
-        let data = await response.json();
+        const responseData = await response.json();
 
-        console.log("Raw API response:", data);
-        
-        if (Array.isArray(data) && data.length === 1 && typeof data[0] === "string") {
-            data = JSON.parse(data[0]);
-        }
-        
+        console.log("Salesforce Response:", responseData);
+
+        /*
+         * Convert whatever Salesforce returned
+         * into a proper JavaScript array.
+         */
+        const data = normalizeExpenseData(responseData);
+
+        console.log("Normalized Expense Data:", data);
+
         if (!Array.isArray(data)) {
-            throw new Error("API response is not an array");
+            throw new Error("Salesforce API did not return an expense array.");
         }
-        
+
         expenses = data;
-        
-        console.log("Parsed expenses:", expenses);
-        
+
         renderExpenses(expenses);
         calculateSummary(expenses);
+
     } catch (error) {
 
-        console.error(error);
+        console.error("Expense API Error:", error);
 
         tableBody.innerHTML = `
             <tr>
@@ -182,49 +395,222 @@ async function loadExpenses() {
 }
 
 
+/* ============================
+   NORMALIZE API RESPONSE
+============================ */
+
+function normalizeExpenseData(data) {
+
+    /*
+     * Case 1:
+     *
+     * [
+     *   {
+     *      expensedate: "...",
+     *      expense: "...",
+     *      amount: 4998
+     *   }
+     * ]
+     */
+
+    if (Array.isArray(data)) {
+
+        /*
+         * Already correct array of objects.
+         */
+        if (data.every(item => item !== null && typeof item === "object")) {
+            return data;
+        }
+
+        /*
+         * Case 2:
+         *
+         * [
+         *   "[{\"expensedate\":\"2026-08-17\",...}]"
+         * ]
+         */
+
+        if (data.length === 1 && typeof data[0] === "string") {
+
+            try {
+                const parsed = JSON.parse(data[0]);
+
+                return normalizeExpenseData(parsed);
+
+            } catch (error) {
+                console.error("Inner JSON parse failed:", error);
+                return [];
+            }
+        }
+
+        /*
+         * If array contains JSON strings,
+         * try parsing the first one.
+         */
+        if (data.length > 0 && typeof data[0] === "string") {
+
+            try {
+
+                const parsed = JSON.parse(data[0]);
+
+                return normalizeExpenseData(parsed);
+
+            } catch (error) {
+
+                console.error("JSON parsing failed:", error);
+                return [];
+            }
+        }
+
+        return data;
+    }
+
+
+    /*
+     * Case 3:
+     *
+     * Salesforce returns:
+     *
+     * {
+     *    "data": [...]
+     * }
+     */
+
+    if (data && typeof data === "object") {
+
+        if (Array.isArray(data.data)) {
+            return normalizeExpenseData(data.data);
+        }
+
+        if (Array.isArray(data.records)) {
+            return normalizeExpenseData(data.records);
+        }
+
+        if (data.body) {
+
+            if (typeof data.body === "string") {
+
+                try {
+                    return normalizeExpenseData(JSON.parse(data.body));
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            return normalizeExpenseData(data.body);
+        }
+    }
+
+
+    /*
+     * Case 4:
+     *
+     * Salesforce returns the entire
+     * JSON array as a string.
+     */
+
+    if (typeof data === "string") {
+
+        try {
+            return normalizeExpenseData(JSON.parse(data));
+        } catch (error) {
+            console.error("String JSON parsing failed:", error);
+            return [];
+        }
+    }
+
+    return [];
+}
+
+
+/* ============================
+   RENDER TABLE
+============================ */
+
 function renderExpenses(records) {
+
     const tableBody = document.getElementById("expenseTableBody");
 
+    /*
+     * This prevents records.map is not a function.
+     */
     if (!Array.isArray(records)) {
-        console.error("Expected array but received:", records);
+
+        console.error("renderExpenses expected array:", records);
+
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="loading">Invalid expense data.</td>
+                <td colspan="6" class="loading">
+                    Invalid expense data received from Salesforce.
+                </td>
             </tr>
         `;
+
         return;
     }
 
     if (records.length === 0) {
+
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="loading">No expense records found.</td>
+                <td colspan="6" class="loading">
+                    No expense records found.
+                </td>
             </tr>
         `;
+
         return;
     }
 
     tableBody.innerHTML = records.map((record, index) => {
+
         const status = getStatus(record.additionalInformation);
 
         return `
             <tr>
-                <td>${index + 1}</td>
-                <td class="date">${formatDate(record.expensedate)}</td>
-                <td class="expense-name">${escapeHtml(record.expense)}</td>
-                <td class="amount">₹${Number(record.amount || 0).toLocaleString("en-IN")}</td>
-                <td class="info">${escapeHtml(record.additionalInformation || "-")}</td>
+
+                <td>
+                    ${index + 1}
+                </td>
+
+                <td class="date">
+                    ${formatDate(record.expensedate)}
+                </td>
+
+                <td class="expense-name">
+                    ${escapeHtml(record.expense)}
+                </td>
+
+                <td class="amount">
+                    ₹${Number(record.amount || 0).toLocaleString("en-IN")}
+                </td>
+
+                <td class="info">
+                    ${escapeHtml(record.additionalInformation || "-")}
+                </td>
+
                 <td>
                     <span class="status ${status.class}">
                         ${status.text}
                     </span>
                 </td>
+
             </tr>
         `;
+
     }).join("");
 }
-    
+
+
+/* ============================
+   SUMMARY
+============================ */
+
 function calculateSummary(records) {
+
+    if (!Array.isArray(records)) {
+        return;
+    }
 
     const total = records.reduce(
         (sum, record) => sum + Number(record.amount || 0),
@@ -237,12 +623,13 @@ function calculateSummary(records) {
     document.getElementById("totalRecords").textContent =
         records.length;
 
+
     /*
-     * For now this only detects pending text from
+     * Detect pending amount from
      * additionalInformation.
      *
-     * Later we should store a separate paid/pending
-     * amount field in Salesforce.
+     * Example:
+     * "6k/- Pending"
      */
 
     let pending = 0;
@@ -250,16 +637,19 @@ function calculateSummary(records) {
     records.forEach(record => {
 
         const information =
-            (record.additionalInformation || "").toLowerCase();
+            String(record.additionalInformation || "").toLowerCase();
 
         if (information.includes("pending")) {
 
-            const match = information.match(/(\d+(?:\.\d+)?)\s*k/);
+            const match = information.match(
+                /(\d+(?:\.\d+)?)\s*k/
+            );
 
             if (match) {
                 pending += Number(match[1]) * 1000;
             }
         }
+
     });
 
     document.getElementById("pendingAmount").textContent =
@@ -267,22 +657,30 @@ function calculateSummary(records) {
 }
 
 
+/* ============================
+   STATUS
+============================ */
+
 function getStatus(information) {
 
-    const text = (information || "").toLowerCase();
+    const text = String(information || "").toLowerCase();
 
     if (text.includes("pending")) {
+
         return {
             text: "Pending",
             class: "pending"
         };
+
     }
 
     if (text.includes("partial")) {
+
         return {
             text: "Partial",
             class: "partial"
         };
+
     }
 
     return {
@@ -292,6 +690,10 @@ function getStatus(information) {
 }
 
 
+/* ============================
+   DATE FORMAT
+============================ */
+
 function formatDate(dateString) {
 
     if (!dateString) {
@@ -300,6 +702,10 @@ function formatDate(dateString) {
 
     const date = new Date(dateString);
 
+    if (isNaN(date.getTime())) {
+        return dateString;
+    }
+
     return date.toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
@@ -307,6 +713,10 @@ function formatDate(dateString) {
     });
 }
 
+
+/* ============================
+   HTML ESCAPE
+============================ */
 
 function escapeHtml(value) {
 
@@ -319,19 +729,50 @@ function escapeHtml(value) {
 }
 
 
-document.getElementById("searchInput").addEventListener("input", function () {
+/* ============================
+   SEARCH
+============================ */
 
-    const searchValue = this.value.toLowerCase();
+document.getElementById("searchInput").addEventListener(
+    "input",
+    function () {
 
-    const filteredRecords = expenses.filter(record =>
-        String(record.expense || "").toLowerCase().includes(searchValue) ||
-        String(record.additionalInformation || "").toLowerCase().includes(searchValue) ||
-        String(record.expensedate || "").toLowerCase().includes(searchValue)
-    );
+        const searchValue = this.value.toLowerCase().trim();
 
-    renderExpenses(filteredRecords);
-});
+        if (!searchValue) {
 
+            renderExpenses(expenses);
+            return;
+        }
+
+        const filteredRecords = expenses.filter(record =>
+
+            String(record.expense || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+            ||
+
+            String(record.additionalInformation || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+            ||
+
+            String(record.expensedate || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+        );
+
+        renderExpenses(filteredRecords);
+    }
+);
+
+
+/* ============================
+   START
+============================ */
 
 loadExpenses();
 
