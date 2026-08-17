@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shree Ganesh Mandal - Expenses Form</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #ff9a3c 0%, #ff6b35 50%, #c1121f 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #fffaf0;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    overflow: hidden;
+    border: 3px solid #ffb703;
+  }
+  .header {
+    background: #c1121f;
+    color: #fff;
+    text-align: center;
+    padding: 22px 16px 18px;
+  }
+  .header h1 {
+    font-size: 22px;
+    letter-spacing: 0.5px;
+  }
+  .header p {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+  .om-symbol {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+  form {
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7a1f1f;
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input, textarea {
+    width: 100%;
+    padding: 11px 12px;
+    border: 2px solid #ffd166;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fff;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus {
+    border-color: #c1121f;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  .rupee-wrap {
+    position: relative;
+  }
+  .rupee-wrap span {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a1f1f;
+    font-weight: 600;
+  }
+  .rupee-wrap input {
+    padding-left: 28px;
+  }
+  button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 13px;
+    background: #c1121f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #9d0e18; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  .status {
+    margin-top: 14px;
+    font-size: 14px;
+    text-align: center;
+    min-height: 18px;
+  }
+  .status.success { color: #2a7a2a; }
+  .status.error { color: #c1121f; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="om-symbol">🕉️</div>
+    <h1>Shree Ganesh Mandal</h1>
+    <p>Expenses Collection Form</p>
+  </div>
+
+  <form id="expenseForm">
+    <label for="expenseName">Expense Name</label>
+    <input type="text" id="expenseName" name="expenseName" placeholder="e.g. Decoration, Flowers, Prasad" required>
+
+    <label for="amount">Amount (₹)</label>
+    <div class="rupee-wrap">
+      <span>₹</span>
+      <input type="number" id="amount" name="amount" placeholder="0" min="1" step="1" required>
+    </div>
+
+    <label for="expenseDate">Date</label>
+    <input type="date" id="expenseDate" name="expenseDate" required>
+
+    <label for="additionalInfo">Additional Information</label>
+    <textarea id="additionalInfo" name="additionalInfo" placeholder="Vendor name, notes, receipt number, etc. (optional)"></textarea>
+
+    <button type="submit" id="submitBtn">Submit Expense</button>
+    <div class="status" id="statusMsg"></div>
+  </form>
+</div>
+
+<script>
+  // Set default date to today
+  document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+
+  const form = document.getElementById('expenseForm');
+  const statusMsg = document.getElementById('statusMsg');
+  const submitBtn = document.getElementById('submitBtn');
+
+  // ---------------------------------------------------------------
+  // DIRECT SALESFORCE INTEGRATION (inline)
+  // Calls your Apex REST endpoint directly using the access token below.
+  // NOTE: This is a Salesforce SESSION access token — it expires
+  // (usually within a couple hours), so this will stop working after
+  // that and you'll need to paste a fresh token in. Also, since it's
+  // hardcoded here, anyone with this file can use it to call your org
+  // until it expires — fine for local/private testing, not for a
+  // publicly hosted page.
+  // ---------------------------------------------------------------
+  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/expense/";
+  const SF_ACCESS_TOKEN = "PASTE_YOUR_FRESH_SESSION_TOKEN_HERE";
+
+  async function submitToSalesforce(data) {
+    const response = await fetch(SF_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${SF_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.success === false) {
+      throw new Error(result.error || "Submission failed");
+    }
+
+    return result;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+      expenseName: document.getElementById('expenseName').value.trim(),
+      amount: document.getElementById('amount').value,
+      expenseDate: document.getElementById('expenseDate').value,
+      additionalInfo: document.getElementById('additionalInfo').value.trim()
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    statusMsg.textContent = "";
+    statusMsg.className = "status";
+
+    try {
+      await submitToSalesforce(data);
+      statusMsg.textContent = "✅ Expense recorded successfully!";
+      statusMsg.className = "status success";
+      form.reset();
+      document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+    } catch (err) {
+      statusMsg.textContent = "❌ " + err.message;
+      statusMsg.className = "status error";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Expense";
+    }
+  });
+</script>
+
+</body>
+</html>
