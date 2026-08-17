@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ganesh Mandal - Expense Records</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #f5f6fa; color: #222; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { background: linear-gradient(135deg, #ff7a18, #ff4b2b); color: white; padding: 28px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(255,87,34,.2); }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: .9; }
+        .summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+        .summary-card { background: white; padding: 20px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,.06); }
+        .summary-card .label { font-size: 13px; color: #777; margin-bottom: 8px; }
+        .summary-card .value { font-size: 26px; font-weight: 700; }
+        .summary-card.total .value { color: #e85d04; }
+        .table-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 18px rgba(0,0,0,.06); }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 15px; }
+        .table-header h2 { font-size: 20px; }
+        .search-box { padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; outline: none; width: 230px; font-size: 14px; }
+        .search-box:focus { border-color: #ff6b35; }
+        .table-wrapper { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        thead { background: #fff4ed; }
+        th { text-align: left; padding: 14px 16px; font-size: 13px; color: #7a4a2d; font-weight: 600; white-space: nowrap; }
+        td { padding: 16px; border-bottom: 1px solid #eee; font-size: 14px; }
+        tbody tr:hover { background: #fffaf7; }
+        .expense-name { font-weight: 600; }
+        .date { color: #666; }
+        .amount { font-weight: 700; color: #e85d04; white-space: nowrap; }
+        .info { color: #666; max-width: 250px; }
+        .status { display: inline-block; padding: 6px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status.paid { background: #e8f8ee; color: #16803c; }
+        .status.pending { background: #fff3cd; color: #996c00; }
+        .status.partial { background: #e8f1ff; color: #2563a6; }
+        .loading { text-align: center; padding: 40px; color: #777; }
+        .error { background: #ffe8e8; color: #c62828; padding: 14px; border-radius: 8px; margin-bottom: 15px; display: none; }
+        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header { padding: 22px; }
+            .header h1 { font-size: 23px; }
+            .summary { grid-template-columns: 1fr; }
+            .table-card { padding: 14px; }
+            .table-header { flex-direction: column; align-items: stretch; }
+            .search-box { width: 100%; }
+        }
+        @media (max-width: 480px) {
+            .header { border-radius: 12px; }
+            .summary-card { padding: 16px; }
+            .summary-card .value { font-size: 22px; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>Expenses</h1>
+        <p>Expense records and collection details</p>
+    </div>
+
+    <div class="summary">
+        <div class="summary-card total">
+            <div class="label">Total Expenses</div>
+            <div class="value" id="totalExpenses">₹0</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="label">Total Records</div>
+            <div class="value" id="totalRecords">0</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="label">Pending Amount</div>
+            <div class="value" id="pendingAmount">₹0</div>
+        </div>
+    </div>
+
+    <div id="errorMessage" class="error"></div>
+
+    <div class="table-card">
+
+        <div class="table-header">
+            <h2>Expense Records</h2>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search expenses...">
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Expense Date</th>
+                        <th>Expense</th>
+                        <th>Amount</th>
+                        <th>Additional Information</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="expenseTableBody">
+                    <tr>
+                        <td colspan="6" class="loading">Loading expense records...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        Ganesh Mandal Expense Management • 2026
+    </div>
+
+</div>
+
+<script>
+
+const API_URL = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/expenseList/";
+
+const ACCESS_TOKEN = "00DdM00000uWXkx!AQEAQAIwYI56RE9Z3JJHlySRRjELqgXVepxSpI8UKjrLfVqBSMh9xbMs8Z8NyvmsQgiIVJNf7iFPm5bubZMPGNnEFtxmrBWu";
+
+let expenses = [];
+
+async function loadExpenses() {
+
+    const tableBody = document.getElementById("expenseTableBody");
+    const errorMessage = document.getElementById("errorMessage");
+
+    try {
+
+        const response = await fetch(API_URL, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        let data = await response.json();
+
+        /*
+         * Your current Salesforce response is:
+         *
+         * [
+         *   "[{\"expensedate\":\"2026-08-17\", ...}]"
+         * ]
+         *
+         * Therefore we need to parse the inner JSON string.
+         */
+
+        if (Array.isArray(data) && typeof data[0] === "string") {
+            data = JSON.parse(data[0]);
+        }
+
+        expenses = data;
+
+        renderExpenses(expenses);
+        calculateSummary(expenses);
+
+    } catch (error) {
+
+        console.error(error);
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="loading">
+                    Unable to load expense records.
+                </td>
+            </tr>
+        `;
+
+        errorMessage.textContent = error.message;
+        errorMessage.style.display = "block";
+    }
+}
+
+
+function renderExpenses(records) {
+
+    const tableBody = document.getElementById("expenseTableBody");
+
+    if (!records || records.length === 0) {
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="loading">
+                    No expense records found.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    tableBody.innerHTML = records.map((record, index) => {
+
+        const status = getStatus(record.additionalInformation);
+
+        return `
+            <tr>
+                <td>${index + 1}</td>
+
+                <td class="date">
+                    ${formatDate(record.expensedate)}
+                </td>
+
+                <td class="expense-name">
+                    ${escapeHtml(record.expense)}
+                </td>
+
+                <td class="amount">
+                    ₹${Number(record.amount || 0).toLocaleString("en-IN")}
+                </td>
+
+                <td class="info">
+                    ${escapeHtml(record.additionalInformation || "-")}
+                </td>
+
+                <td>
+                    <span class="status ${status.class}">
+                        ${status.text}
+                    </span>
+                </td>
+            </tr>
+        `;
+
+    }).join("");
+}
+
+
+function calculateSummary(records) {
+
+    const total = records.reduce(
+        (sum, record) => sum + Number(record.amount || 0),
+        0
+    );
+
+    document.getElementById("totalExpenses").textContent =
+        `₹${total.toLocaleString("en-IN")}`;
+
+    document.getElementById("totalRecords").textContent =
+        records.length;
+
+    /*
+     * For now this only detects pending text from
+     * additionalInformation.
+     *
+     * Later we should store a separate paid/pending
+     * amount field in Salesforce.
+     */
+
+    let pending = 0;
+
+    records.forEach(record => {
+
+        const information =
+            (record.additionalInformation || "").toLowerCase();
+
+        if (information.includes("pending")) {
+
+            const match = information.match(/(\d+(?:\.\d+)?)\s*k/);
+
+            if (match) {
+                pending += Number(match[1]) * 1000;
+            }
+        }
+    });
+
+    document.getElementById("pendingAmount").textContent =
+        `₹${pending.toLocaleString("en-IN")}`;
+}
+
+
+function getStatus(information) {
+
+    const text = (information || "").toLowerCase();
+
+    if (text.includes("pending")) {
+        return {
+            text: "Pending",
+            class: "pending"
+        };
+    }
+
+    if (text.includes("partial")) {
+        return {
+            text: "Partial",
+            class: "partial"
+        };
+    }
+
+    return {
+        text: "Paid",
+        class: "paid"
+    };
+}
+
+
+function formatDate(dateString) {
+
+    if (!dateString) {
+        return "-";
+    }
+
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+}
+
+
+function escapeHtml(value) {
+
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+document.getElementById("searchInput").addEventListener("input", function () {
+
+    const searchValue = this.value.toLowerCase();
+
+    const filteredRecords = expenses.filter(record =>
+        String(record.expense || "").toLowerCase().includes(searchValue) ||
+        String(record.additionalInformation || "").toLowerCase().includes(searchValue) ||
+        String(record.expensedate || "").toLowerCase().includes(searchValue)
+    );
+
+    renderExpenses(filteredRecords);
+});
+
+
+loadExpenses();
+
+</script>
+
+</body>
+</html>
