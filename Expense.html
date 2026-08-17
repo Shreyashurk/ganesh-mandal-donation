@@ -122,22 +122,25 @@
   </div>
 
   <form id="expenseForm">
-    <label for="expenseName">Expense Name</label>
+    <label for="expenseName">खर्चाचे नाव / Expense Name</label>
     <input type="text" id="expenseName" name="expenseName" placeholder="e.g. Decoration, Flowers, Prasad" required>
 
-    <label for="amount">Amount (₹)</label>
+    <label for="amount">रक्कम (₹) / Amount (₹)</label>
     <div class="rupee-wrap">
       <span>₹</span>
       <input type="number" id="amount" name="amount" placeholder="0" min="1" step="1" required>
     </div>
 
-    <label for="expenseDate">Date</label>
+    <label for="expenseDate">दिनांक / Date</label>
     <input type="date" id="expenseDate" name="expenseDate" required>
 
-    <label for="additionalInfo">Additional Information</label>
+    <label for="providedBy">कोणी दिले / Provided By</label>
+    <input type="text" id="providedBy" name="providedBy" placeholder="Name of person who provided this expense" required>
+
+    <label for="additionalInfo">अतिरिक्त माहिती / Additional Information</label>
     <textarea id="additionalInfo" name="additionalInfo" placeholder="Vendor name, notes, receipt number, etc. (optional)"></textarea>
 
-    <button type="submit" id="submitBtn">Submit Expense</button>
+    <button type="submit" id="submitBtn">खर्च सबमिट करा / Submit Expense</button>
     <div class="status" id="statusMsg"></div>
   </form>
 </div>
@@ -189,6 +192,7 @@
       expenseName: document.getElementById('expenseName').value.trim(),
       amount: document.getElementById('amount').value,
       expenseDate: document.getElementById('expenseDate').value,
+      providedBy: document.getElementById('providedBy').value.trim(),
       additionalInfo: document.getElementById('additionalInfo').value.trim()
     };
 
