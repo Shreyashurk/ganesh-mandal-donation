@@ -148,24 +148,13 @@
   const statusMsg = document.getElementById('statusMsg');
   const submitBtn = document.getElementById('submitBtn');
 
-  // ---------------------------------------------------------------
-  // DIRECT SALESFORCE INTEGRATION (inline)
-  // Calls your Apex REST endpoint directly using the access token below.
-  // NOTE: This is a Salesforce SESSION access token — it expires
-  // (usually within a couple hours), so this will stop working after
-  // that and you'll need to paste a fresh token in. Also, since it's
-  // hardcoded here, anyone with this file can use it to call your org
-  // until it expires — fine for local/private testing, not for a
-  // publicly hosted page.
-  // ---------------------------------------------------------------
-  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/donation/";
-  const SF_ACCESS_TOKEN = "00DdM00000uWXkx!AQEAQAIwYI56RE9Z3JJHlySRRjELqgXVepxSpI8UKjrLfVqBSMh9xbMs8Z8NyvmsQgiIVJNf7iFPm5bubZMPGNnEFtxmrBWu";
+  // Public Salesforce Apex REST endpoint - no authentication required
+  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce-sites.com/s/services/apexrest/donation/";
 
   async function submitToSalesforce(data) {
     const response = await fetch(SF_ENDPOINT, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${SF_ACCESS_TOKEN}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(data)
@@ -198,15 +187,19 @@
 
     try {
       await submitToSalesforce(data);
+
       statusMsg.textContent = "✅ Donation recorded successfully! Ready for next entry.";
       statusMsg.className = "status success";
+
       form.reset();
       document.getElementById('donationDate').value = new Date().toISOString().split('T')[0];
       document.getElementById('donorName').focus();
+
       setTimeout(() => {
         statusMsg.textContent = "";
         statusMsg.className = "status";
       }, 4000);
+
     } catch (err) {
       statusMsg.textContent = "❌ " + err.message;
       statusMsg.className = "status error";
