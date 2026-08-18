@@ -141,24 +141,72 @@
 </div>
 
 <script>
-  // Set default date to today
   document.getElementById('donationDate').value = new Date().toISOString().split('T')[0];
 
   const form = document.getElementById('donationForm');
   const statusMsg = document.getElementById('statusMsg');
   const submitBtn = document.getElementById('submitBtn');
 
-  // Public Salesforce Apex REST endpoint - no authentication required
-  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce-sites.com/s/services/apexrest/donation/";
+  const SF_TOKEN_ENDPOINT = "https://login.salesforce.com/services/oauth2/token";
+  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/donation/";
 
-  async function submitToSalesforce(data) {
-    const response = await fetch(SF_ENDPOINT, {
+  const SF_CLIENT_ID = "YOUR_CLIENT_ID";
+  const SF_CLIENT_SECRET = "YOUR_CLIENT_SECRET";
+
+  let accessToken = null;
+
+  async function getAccessToken() {
+    const response = await fetch(SF_TOKEN_ENDPOINT, {
       method: "POST",
       headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: SF_CLIENT_ID,
+        client_secret: SF_CLIENT_SECRET
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error_description || result.error || "Unable to get Salesforce access token");
+    }
+
+    accessToken = result.access_token;
+
+    return accessToken;
+  }
+
+  async function submitToSalesforce(data) {
+    if (!accessToken) {
+      await getAccessToken();
+    }
+
+    let response = await fetch(SF_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(data)
     });
+
+    if (response.status === 401) {
+      accessToken = null;
+
+      await getAccessToken();
+
+      response = await fetch(SF_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+    }
 
     const result = await response.json();
 
