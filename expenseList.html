@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ganesh Mandal - Expense Records</title>
+    <title>Shree Sai Ganesh Utsav Mandal - Expense Records</title>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -318,464 +318,158 @@
 </div>
 
 <script>
+const TOKEN_ENDPOINT="https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/oauth2/token";
+const API_URL="https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/expenseList/";
+const CLIENT_ID="3MVG9WVXk15qiz1KyJCb0e7OY9F.t0m18SQ_ONF344h.EpHIfvkcgqRgaEt3W63lnDCC2ZoCEsf1jm.Rg6KaA";
+const CLIENT_SECRET="C690649BAE1615CE442AB5D8EEF9EC01ED919A519D313B21DBD4B44DD17F09C8";
+let accessToken=null;
+let expenses=[];
 
-const API_URL = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce.com/services/apexrest/expenseList/";
+async function getAccessToken(){
+    const response=await fetch(TOKEN_ENDPOINT,{
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:new URLSearchParams({
+            grant_type:"client_credentials",
+            client_id:CLIENT_ID,
+            client_secret:CLIENT_SECRET
+        })
+    });
+    const result=await response.json();
+    if(!response.ok) throw new Error(result.error_description||result.error||"Unable to get Salesforce access token");
+    accessToken=result.access_token;
+    return accessToken;
+}
 
-/*
- * Put your current access token here for local testing only.
- *
- * DO NOT deploy a Salesforce access token in public HTML.
- */
-const ACCESS_TOKEN = "00DdM00000uWXkx!AQEAQAIwYI56RE9Z3JJHlySRRjELqgXVepxSpI8UKjrLfVqBSMh9xbMs8Z8NyvmsQgiIVJNf7iFPm5bubZMPGNnEFtxmrBWu";
-
-let expenses = [];
-
-
-/* ============================
-   LOAD EXPENSES
-============================ */
-
-async function loadExpenses() {
-
-    const tableBody = document.getElementById("expenseTableBody");
-    const errorMessage = document.getElementById("errorMessage");
-
-    errorMessage.style.display = "none";
-
-    try {
-
-        const response = await fetch(API_URL, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                "Content-Type": "application/json"
+async function loadExpenses(){
+    const tableBody=document.getElementById("expenseTableBody");
+    const errorMessage=document.getElementById("errorMessage");
+    errorMessage.style.display="none";
+    try{
+        if(!accessToken) await getAccessToken();
+        let response=await fetch(API_URL,{
+            method:"GET",
+            headers:{
+                "Authorization":`Bearer ${accessToken}`,
+                "Content-Type":"application/json"
             }
         });
-
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+        if(response.status===401){
+            accessToken=null;
+            await getAccessToken();
+            response=await fetch(API_URL,{
+                method:"GET",
+                headers:{
+                    "Authorization":`Bearer ${accessToken}`,
+                    "Content-Type":"application/json"
+                }
+            });
         }
-
-        const responseData = await response.json();
-
-        console.log("Salesforce Response:", responseData);
-
-        /*
-         * Convert whatever Salesforce returned
-         * into a proper JavaScript array.
-         */
-        const data = normalizeExpenseData(responseData);
-
-        console.log("Normalized Expense Data:", data);
-
-        if (!Array.isArray(data)) {
-            throw new Error("Salesforce API did not return an expense array.");
-        }
-
-        expenses = data;
-
+        if(!response.ok) throw new Error(`API Error: ${response.status}`);
+        const responseData=await response.json();
+        console.log("Salesforce Response:",responseData);
+        const data=normalizeExpenseData(responseData);
+        if(!Array.isArray(data)) throw new Error("Salesforce API did not return an expense array.");
+        expenses=data;
         renderExpenses(expenses);
         calculateSummary(expenses);
-
-    } catch (error) {
-
-        console.error("Expense API Error:", error);
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="loading">
-                    Unable to load expense records.
-                </td>
-            </tr>
-        `;
-
-        errorMessage.textContent = error.message;
-        errorMessage.style.display = "block";
+    }catch(error){
+        console.error("Expense API Error:",error);
+        tableBody.innerHTML=`<tr><td colspan="6" class="loading">Unable to load expense records.</td></tr>`;
+        errorMessage.textContent=error.message;
+        errorMessage.style.display="block";
     }
 }
 
-
-/* ============================
-   NORMALIZE API RESPONSE
-============================ */
-
-function normalizeExpenseData(data) {
-
-    /*
-     * Case 1:
-     *
-     * [
-     *   {
-     *      expensedate: "...",
-     *      expense: "...",
-     *      amount: 4998
-     *   }
-     * ]
-     */
-
-    if (Array.isArray(data)) {
-
-        /*
-         * Already correct array of objects.
-         */
-        if (data.every(item => item !== null && typeof item === "object")) {
-            return data;
+function normalizeExpenseData(data){
+    if(Array.isArray(data)){
+        if(data.every(item=>item!==null&&typeof item==="object")) return data;
+        if(data.length>0&&typeof data[0]==="string"){
+            try{return normalizeExpenseData(JSON.parse(data[0]));}catch(error){console.error("JSON parsing failed:",error);return [];}
         }
-
-        /*
-         * Case 2:
-         *
-         * [
-         *   "[{\"expensedate\":\"2026-08-17\",...}]"
-         * ]
-         */
-
-        if (data.length === 1 && typeof data[0] === "string") {
-
-            try {
-                const parsed = JSON.parse(data[0]);
-
-                return normalizeExpenseData(parsed);
-
-            } catch (error) {
-                console.error("Inner JSON parse failed:", error);
-                return [];
-            }
-        }
-
-        /*
-         * If array contains JSON strings,
-         * try parsing the first one.
-         */
-        if (data.length > 0 && typeof data[0] === "string") {
-
-            try {
-
-                const parsed = JSON.parse(data[0]);
-
-                return normalizeExpenseData(parsed);
-
-            } catch (error) {
-
-                console.error("JSON parsing failed:", error);
-                return [];
-            }
-        }
-
         return data;
     }
-
-
-    /*
-     * Case 3:
-     *
-     * Salesforce returns:
-     *
-     * {
-     *    "data": [...]
-     * }
-     */
-
-    if (data && typeof data === "object") {
-
-        if (Array.isArray(data.data)) {
-            return normalizeExpenseData(data.data);
-        }
-
-        if (Array.isArray(data.records)) {
-            return normalizeExpenseData(data.records);
-        }
-
-        if (data.body) {
-
-            if (typeof data.body === "string") {
-
-                try {
-                    return normalizeExpenseData(JSON.parse(data.body));
-                } catch (error) {
-                    return [];
-                }
+    if(data&&typeof data==="object"){
+        if(Array.isArray(data.data)) return normalizeExpenseData(data.data);
+        if(Array.isArray(data.records)) return normalizeExpenseData(data.records);
+        if(data.body){
+            if(typeof data.body==="string"){
+                try{return normalizeExpenseData(JSON.parse(data.body));}catch(error){return [];}
             }
-
             return normalizeExpenseData(data.body);
         }
     }
-
-
-    /*
-     * Case 4:
-     *
-     * Salesforce returns the entire
-     * JSON array as a string.
-     */
-
-    if (typeof data === "string") {
-
-        try {
-            return normalizeExpenseData(JSON.parse(data));
-        } catch (error) {
-            console.error("String JSON parsing failed:", error);
-            return [];
-        }
+    if(typeof data==="string"){
+        try{return normalizeExpenseData(JSON.parse(data));}catch(error){return [];}
     }
-
     return [];
 }
 
-
-/* ============================
-   RENDER TABLE
-============================ */
-
-function renderExpenses(records) {
-
-    const tableBody = document.getElementById("expenseTableBody");
-
-    /*
-     * This prevents records.map is not a function.
-     */
-    if (!Array.isArray(records)) {
-
-        console.error("renderExpenses expected array:", records);
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="loading">
-                    Invalid expense data received from Salesforce.
-                </td>
-            </tr>
-        `;
-
+function renderExpenses(records){
+    const tableBody=document.getElementById("expenseTableBody");
+    if(!Array.isArray(records)){
+        tableBody.innerHTML=`<tr><td colspan="6" class="loading">Invalid expense data received from Salesforce.</td></tr>`;
         return;
     }
-
-    if (records.length === 0) {
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="loading">
-                    No expense records found.
-                </td>
-            </tr>
-        `;
-
+    if(records.length===0){
+        tableBody.innerHTML=`<tr><td colspan="6" class="loading">No expense records found.</td></tr>`;
         return;
     }
-
-    tableBody.innerHTML = records.map((record, index) => {
-
-        const status = getStatus(record.additionalInformation);
-
-        return `
-            <tr>
-
-                <td>
-                    ${index + 1}
-                </td>
-
-                <td class="date">
-                    ${formatDate(record.expensedate)}
-                </td>
-
-                <td class="expense-name">
-                    ${escapeHtml(record.expense)}
-                </td>
-
-                <td class="amount">
-                    ₹${Number(record.amount || 0).toLocaleString("en-IN")}
-                </td>
-
-                <td class="info">
-                    ${escapeHtml(record.additionalInformation || "-")}
-                </td>
-
-                <td>
-                    <span class="status ${status.class}">
-                        ${status.text}
-                    </span>
-                </td>
-
-            </tr>
-        `;
-
+    tableBody.innerHTML=records.map((record,index)=>{
+        const status=getStatus(record.additionalInformation);
+        return `<tr><td>${index+1}</td><td class="date">${formatDate(record.expensedate)}</td><td class="expense-name">${escapeHtml(record.expense)}</td><td class="amount">₹${Number(record.amount||0).toLocaleString("en-IN")}</td><td class="info">${escapeHtml(record.additionalInformation||"-")}</td><td><span class="status ${status.class}">${status.text}</span></td></tr>`;
     }).join("");
 }
 
+function calculateSummary(records){
+    if(!Array.isArray(records)) return;
+    const total=records.reduce((sum,record)=>sum+Number(record.amount||0),0);
+    document.getElementById("totalExpenses").textContent=`₹${total.toLocaleString("en-IN")}`;
+    document.getElementById("totalRecords").textContent=records.length;
+    let pending=0;
+    records.forEach(record=>{
+        const information=String(record.additionalInformation||"").toLowerCase();
+        if(information.includes("pending")){
+            const match=information.match(/(\d+(?:\.\d+)?)\s*k/);
+            if(match) pending+=Number(match[1])*1000;
+        }
+    });
+    document.getElementById("pendingAmount").textContent=`₹${pending.toLocaleString("en-IN")}`;
+}
 
-/* ============================
-   SUMMARY
-============================ */
+function getStatus(information){
+    const text=String(information||"").toLowerCase();
+    if(text.includes("pending")) return {text:"Pending",class:"pending"};
+    if(text.includes("partial")) return {text:"Partial",class:"partial"};
+    return {text:"Paid",class:"paid"};
+}
 
-function calculateSummary(records) {
+function formatDate(dateString){
+    if(!dateString) return "-";
+    const date=new Date(dateString);
+    if(isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+}
 
-    if (!Array.isArray(records)) {
+function escapeHtml(value){
+    return String(value||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+
+document.getElementById("searchInput").addEventListener("input",function(){
+    const searchValue=this.value.toLowerCase().trim();
+    if(!searchValue){
+        renderExpenses(expenses);
         return;
     }
-
-    const total = records.reduce(
-        (sum, record) => sum + Number(record.amount || 0),
-        0
+    const filteredRecords=expenses.filter(record=>
+        String(record.expense||"").toLowerCase().includes(searchValue)||
+        String(record.additionalInformation||"").toLowerCase().includes(searchValue)||
+        String(record.expensedate||"").toLowerCase().includes(searchValue)
     );
-
-    document.getElementById("totalExpenses").textContent =
-        `₹${total.toLocaleString("en-IN")}`;
-
-    document.getElementById("totalRecords").textContent =
-        records.length;
-
-
-    /*
-     * Detect pending amount from
-     * additionalInformation.
-     *
-     * Example:
-     * "6k/- Pending"
-     */
-
-    let pending = 0;
-
-    records.forEach(record => {
-
-        const information =
-            String(record.additionalInformation || "").toLowerCase();
-
-        if (information.includes("pending")) {
-
-            const match = information.match(
-                /(\d+(?:\.\d+)?)\s*k/
-            );
-
-            if (match) {
-                pending += Number(match[1]) * 1000;
-            }
-        }
-
-    });
-
-    document.getElementById("pendingAmount").textContent =
-        `₹${pending.toLocaleString("en-IN")}`;
-}
-
-
-/* ============================
-   STATUS
-============================ */
-
-function getStatus(information) {
-
-    const text = String(information || "").toLowerCase();
-
-    if (text.includes("pending")) {
-
-        return {
-            text: "Pending",
-            class: "pending"
-        };
-
-    }
-
-    if (text.includes("partial")) {
-
-        return {
-            text: "Partial",
-            class: "partial"
-        };
-
-    }
-
-    return {
-        text: "Paid",
-        class: "paid"
-    };
-}
-
-
-/* ============================
-   DATE FORMAT
-============================ */
-
-function formatDate(dateString) {
-
-    if (!dateString) {
-        return "-";
-    }
-
-    const date = new Date(dateString);
-
-    if (isNaN(date.getTime())) {
-        return dateString;
-    }
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
-}
-
-
-/* ============================
-   HTML ESCAPE
-============================ */
-
-function escapeHtml(value) {
-
-    return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-
-/* ============================
-   SEARCH
-============================ */
-
-document.getElementById("searchInput").addEventListener(
-    "input",
-    function () {
-
-        const searchValue = this.value.toLowerCase().trim();
-
-        if (!searchValue) {
-
-            renderExpenses(expenses);
-            return;
-        }
-
-        const filteredRecords = expenses.filter(record =>
-
-            String(record.expense || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-            ||
-
-            String(record.additionalInformation || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-            ||
-
-            String(record.expensedate || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-        );
-
-        renderExpenses(filteredRecords);
-    }
-);
-
-
-/* ============================
-   START
-============================ */
+    renderExpenses(filteredRecords);
+});
 
 loadExpenses();
-
 </script>
 
 </body>
