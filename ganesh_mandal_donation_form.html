@@ -149,7 +149,7 @@
   const submitBtn = document.getElementById('submitBtn');
 
   // Public Salesforce Apex REST endpoint - no authentication required
-  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce-sites.com/services/apexrest/donation/";
+  const SF_ENDPOINT = "https://orgfarm-3e0de8e3bc-dev-ed.develop.my.salesforce-sites.com/s/services/apexrest/donation/";
 
   async function submitToSalesforce(data) {
     const response = await fetch(SF_ENDPOINT, {
