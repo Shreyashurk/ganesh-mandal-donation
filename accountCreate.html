@@ -191,7 +191,7 @@
             <input type="tel" id="phone" placeholder="Enter phone number">
             <button type="button" id="submitBtn">Create Account</button>
             <div class="status" id="statusMsg"></div>
-            <div class="site-status" id="siteStatus">Experience Site opened. Waiting for Experience Site...</div>
+            <div class="site-status" id="siteStatus">Experience Site opened. Waiting for Account...</div>
             <div class="record-box" id="recordBox">
                 <div class="record-label">Created Salesforce Account Id</div>
                 <div class="record-id" id="recordId"></div>
@@ -213,11 +213,11 @@
 
         const EXPERIENCE_SITE_URL = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com/acr/s";
         const EXPERIENCE_SITE_ORIGIN = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com";
-        const SOURCE_ORIGIN = "https://shreyashurk.github.io";
 
         let accessToken = null;
         let experienceWindow = null;
         let pendingAccountId = null;
+        let messageInterval = null;
 
         async function getAccessToken() {
             const response = await fetch(SF_TOKEN_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "client_credentials", client_id: SF_CLIENT_ID, client_secret: SF_CLIENT_SECRET }) });
@@ -226,6 +226,7 @@
             try { result = JSON.parse(responseText) } catch (e) { throw new Error("Salesforce returned non-JSON response: " + responseText) }
             if (!response.ok) throw new Error(result.error_description || result.error || "Unable to get Salesforce access token");
             accessToken = result.access_token;
+            console.log("OAuth token received");
             return accessToken;
         }
 
@@ -243,27 +244,51 @@
             return result;
         }
 
-        function sendAccountId(accountId) {
+        function sendAccountId() {
             if (!experienceWindow || experienceWindow.closed) {
-                console.error("Experience Site window is not available");
+                console.log("Experience Site window is closed");
                 return;
             }
-            console.log("Sending Account Id:", accountId);
-            experienceWindow.postMessage({ type: "PASS_VALUE", value: accountId }, EXPERIENCE_SITE_ORIGIN);
+            if (!pendingAccountId) {
+                console.log("Account Id is not available yet");
+                return;
+            }
+            console.log("Sending Account Id to Experience Site:", pendingAccountId);
+            experienceWindow.postMessage({ type: "PASS_VALUE", value: pendingAccountId }, EXPERIENCE_SITE_ORIGIN);
+        }
+
+        function startMessageRetry() {
+            if (messageInterval) clearInterval(messageInterval);
+            let attempts = 0;
+            messageInterval = setInterval(() => {
+                attempts++;
+                if (!experienceWindow || experienceWindow.closed) {
+                    clearInterval(messageInterval);
+                    messageInterval = null;
+                    return;
+                }
+                if (!pendingAccountId) return;
+                sendAccountId();
+                siteStatus.textContent = "Sending Account Id to Experience Site... (" + attempts + "/15)";
+                if (attempts >= 15) {
+                    clearInterval(messageInterval);
+                    messageInterval = null;
+                    siteStatus.textContent = "Account Id sent. Check the Experience Site.";
+                }
+            }, 1000);
         }
 
         window.addEventListener("message", (event) => {
-            console.log("Message received:", event.origin, event.data);
+            console.log("Message received from:", event.origin);
+            console.log("Message data:", event.data);
             if (event.origin !== EXPERIENCE_SITE_ORIGIN) return;
-            if (event.data?.type === "EXPERIENCE_SITE_READY") {
-                console.log("Experience Site is ready");
-                siteStatus.textContent = "Experience Site ready. Sending Account Id...";
-                if (pendingAccountId) sendAccountId(pendingAccountId);
-            }
             if (event.data?.type === "VALUE_RECEIVED") {
-                console.log("Experience Site received Account Id successfully");
-                pendingAccountId = null;
-                siteStatus.textContent = "✓ Account Id sent successfully to Experience Site";
+                console.log("Experience Site confirmed Account Id:", event.data.value);
+                if (messageInterval) {
+                    clearInterval(messageInterval);
+                    messageInterval = null;
+                }
+                siteStatus.textContent = "✓ Account Id received successfully by Experience Site";
             }
         });
 
@@ -279,6 +304,7 @@
             }
 
             siteStatus.classList.add("show");
+            siteStatus.textContent = "Experience Site opened. Creating Account...";
 
             const data = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
 
@@ -292,6 +318,7 @@
             try {
                 const result = await createAccount(data);
                 const accountId = result.id;
+
                 console.log("Created Account Id:", accountId);
 
                 pendingAccountId = accountId;
@@ -300,7 +327,10 @@
                 statusMsg.className = "status success";
                 recordIdElement.textContent = accountId;
                 recordBox.classList.add("show");
-                siteStatus.textContent = "Waiting for Experience Site to become ready...";
+                siteStatus.textContent = "Account created. Sending Account Id to Experience Site...";
+
+                startMessageRetry();
+
                 form.reset();
             } catch (error) {
                 console.error("Error:", error);
