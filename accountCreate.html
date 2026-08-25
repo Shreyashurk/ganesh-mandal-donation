@@ -108,8 +108,14 @@ return result;
 }
 
 function sendAccountId(){
-if(!experienceWindow||experienceWindow.closed)return;
-if(!pendingAccountId)return;
+if(!experienceWindow||experienceWindow.closed){
+console.log("Experience Site window is closed");
+return;
+}
+if(!pendingAccountId){
+console.log("Account Id is not available");
+return;
+}
 console.log("Sending Account Id:",pendingAccountId);
 experienceWindow.postMessage({type:"PASS_VALUE",value:pendingAccountId},EXPERIENCE_SITE_ORIGIN);
 }
@@ -145,6 +151,7 @@ clearInterval(messageInterval);
 messageInterval=null;
 }
 siteStatus.textContent="✓ Account Id successfully received by Experience Site";
+}
 });
 
 submitBtn.addEventListener("click",async()=>{
@@ -187,7 +194,7 @@ experienceWindow.location.href=EXPERIENCE_SITE_URL;
 setTimeout(()=>{
 siteStatus.textContent="Experience Site opened. Sending Account Id...";
 startMessageRetry();
-},1500);
+},2000);
 
 form.reset();
 }catch(error){
