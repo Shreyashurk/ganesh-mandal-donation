@@ -199,132 +199,127 @@
         </form>
     </div>
     <script>
-        const form = document.getElementById('accountForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const statusMsg = document.getElementById('statusMsg');
-        const recordBox = document.getElementById('recordBox');
-        const recordIdElement = document.getElementById('recordId');
-        const siteStatus = document.getElementById('siteStatus');
+       const form = document.getElementById('accountForm');
+const submitBtn = document.getElementById('submitBtn');
+const statusMsg = document.getElementById('statusMsg');
+const recordBox = document.getElementById('recordBox');
+const recordIdElement = document.getElementById('recordId');
+const siteStatus = document.getElementById('siteStatus');
 
-        const SF_TOKEN_ENDPOINT = "https://orgfarm-f6666eabf2-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-        const SF_ENDPOINT = "https://orgfarm-f6666eabf2-dev-ed.develop.my.salesforce.com/services/apexrest/externalAccount/";
-        const SF_CLIENT_ID = "3MVG9HtWXcDGV.nGf1l.e7yUGCL6M03YbhpCQMJeE6TPakwtpsaix2Id_rOBxrww5xLdQ8IAHDSZzPL_yLimb";
-        const SF_CLIENT_SECRET = "90F1FBCA412490E025F03090F7ACA12A0B33F30B365474CE87896AC908982CE2";
+const SF_TOKEN_ENDPOINT = "https://orgfarm-f6666eabf2-dev-ed.develop.my.salesforce.com/services/oauth2/token";
+const SF_ENDPOINT = "https://orgfarm-f6666eabf2-dev-ed.develop.my.salesforce.com/services/apexrest/externalAccount/";
+const SF_CLIENT_ID = "3MVG9HtWXcDGV.nGf1l.e7yUGCL6M03YbhpCQMJeE6TPakwtpsaix2Id_rOBxrww5xLdQ8IAHDSZzPL_yLimb";
+const SF_CLIENT_SECRET = "90F1FBCA412490E025F03090F7ACA12A0B33F30B365474CE87896AC908982CE2";
 
-        const EXPERIENCE_SITE_URL = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com/acr/s";
-        const EXPERIENCE_SITE_ORIGIN = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com";
-        const SOURCE_ORIGIN = "https://shreyashurk.github.io";
+const EXPERIENCE_SITE_URL = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com/acr/s";
+const EXPERIENCE_SITE_ORIGIN = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com";
+const SOURCE_ORIGIN = "https://shreyashurk.github.io";
 
-        let accessToken = null;
-        let experienceWindow = null;
-        let pendingAccountId = null;
-        let pendingAccountData = null;
+let accessToken = null;
+let experienceWindow = null;
+let pendingAccountData = null;
 
-        async function getAccessToken() {
-            const response = await fetch(SF_TOKEN_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "client_credentials", client_id: SF_CLIENT_ID, client_secret: SF_CLIENT_SECRET }) });
-            const responseText = await response.text();
-            let result;
-            try { result = JSON.parse(responseText) } catch (e) { throw new Error("Salesforce returned non-JSON response: " + responseText) }
-            if (!response.ok) throw new Error(result.error_description || result.error || "Unable to get Salesforce access token");
-            accessToken = result.access_token;
-            return accessToken;
-        }
+async function getAccessToken() {
+    const response = await fetch(SF_TOKEN_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "client_credentials", client_id: SF_CLIENT_ID, client_secret: SF_CLIENT_SECRET }) });
+    const responseText = await response.text();
+    let result;
+    try { result = JSON.parse(responseText) } catch (e) { throw new Error("Salesforce returned non-JSON response: " + responseText) }
+    if (!response.ok) throw new Error(result.error_description || result.error || "Unable to get Salesforce access token");
+    accessToken = result.access_token;
+    return accessToken;
+}
 
-        async function createAccount(data) {
-            if (!accessToken) await getAccessToken();
-            let response = await fetch(SF_ENDPOINT, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            if (response.status === 401) {
-                accessToken = null;
-                await getAccessToken();
-                response = await fetch(SF_ENDPOINT, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            }
-            const result = await response.json();
-            console.log("Salesforce response:", result);
-            if (!response.ok || result.success === false) throw new Error(result.error || "Account creation failed");
-            return result;
-        }
+async function createAccount(data) {
+    if (!accessToken) await getAccessToken();
+    let response = await fetch(SF_ENDPOINT, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    if (response.status === 401) {
+        accessToken = null;
+        await getAccessToken();
+        response = await fetch(SF_ENDPOINT, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    }
+    const result = await response.json();
+    console.log("Salesforce response:", result);
+    if (!response.ok || result.success === false) throw new Error(result.error || "Account creation failed");
+    return result;
+}
 
-        function sendAccountId(accountData) {
-            if (!experienceWindow || experienceWindow.closed) {
-                console.error("Experience Site window is not available");
-                return;
-            }
-            console.log("Sending Account Id:", accountId);
-            experienceWindow.postMessage({ type: "PASS_VALUE", value: accountData  }, EXPERIENCE_SITE_ORIGIN);
-        }
+function sendAccountData(accountData) {
+    if (!experienceWindow || experienceWindow.closed) {
+        console.error("Experience Site window is not available");
+        return;
+    }
+    console.log("Sending Account object:", accountData);
+    experienceWindow.postMessage({ type: "PASS_VALUE", value: accountData }, EXPERIENCE_SITE_ORIGIN);
+}
 
-        window.addEventListener("message", (event) => {
-            console.log("Message received:", event.origin, event.data);
-            if (event.origin !== EXPERIENCE_SITE_ORIGIN) return;
-            if (event.data?.type === "EXPERIENCE_SITE_READY") {
-                console.log("Experience Site is ready");
-                siteStatus.textContent = "Experience Site ready. Sending Account data...";
-                if (pendingAccountData) sendAccountData(pendingAccountData);
-            }
-            if (event.data?.type === "VALUE_RECEIVED") {
-                console.log("Experience Site received Account Id successfully");
-                pendingAccountId = null;
-                siteStatus.textContent = "✓ Account Id sent successfully to Experience Site";
-            }
-        });
+window.addEventListener("message", (event) => {
+    console.log("Message received:", event.origin, event.data);
+    if (event.origin !== EXPERIENCE_SITE_ORIGIN) return;
+    if (event.data?.type === "EXPERIENCE_SITE_READY") {
+        console.log("Experience Site is ready");
+        siteStatus.textContent = "Experience Site ready. Sending Account data...";
+        if (pendingAccountData) sendAccountData(pendingAccountData);
+    }
+    if (event.data?.type === "VALUE_RECEIVED") {
+        console.log("Experience Site received Account data successfully");
+        pendingAccountData = null;
+        siteStatus.textContent = "✓ Account data sent successfully to Experience Site";
+    }
+});
 
-        submitBtn.addEventListener("click", async () => {
-            if (!form.reportValidity()) return;
+submitBtn.addEventListener("click", async () => {
+    if (!form.reportValidity()) return;
 
-            experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
+    experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
 
-            if (!experienceWindow) {
-                statusMsg.textContent = "❌ Please allow popups for this website";
-                statusMsg.className = "status error";
-                return;
-            }
+    if (!experienceWindow) {
+        statusMsg.textContent = "❌ Please allow popups for this website";
+        statusMsg.className = "status error";
+        return;
+    }
 
-            siteStatus.classList.add("show");
+    siteStatus.classList.add("show");
 
-            const data = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
-            const formData = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
+    const formData = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
 
-            
-            submitBtn.disabled = true;
-            submitBtn.textContent = "Creating...";
-            statusMsg.textContent = "";
-            statusMsg.className = "status";
-            recordBox.classList.remove("show");
-            recordIdElement.textContent = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating...";
+    statusMsg.textContent = "";
+    statusMsg.className = "status";
+    recordBox.classList.remove("show");
+    recordIdElement.textContent = "";
 
-            try {
-                const result = await createAccount(data);
-                const accountId = result.id;
-                console.log("Created Account Id:", accountId);
+    try {
+        const result = await createAccount(formData);
+        const accountId = result.id;
+        console.log("Created Account Id:", accountId);
 
-                pendingAccountId = accountId;
+        const accountObject = {
+            id: accountId,
+            name: formData.accountName,
+            industry: formData.industry,
+            phone: formData.phone
+        };
 
-                const accountObject = {
-                    id: accountId,
-                    name: formData.accountName,
-                    industry: formData.industry,
-                    phone: formData.phone
-                };
+        pendingAccountData = accountObject;
 
-                pendingAccountData = accountObject;
-
-                statusMsg.textContent = "✅ Account created successfully!";
-                statusMsg.className = "status success";
-                recordIdElement.textContent = accountId;
-                recordBox.classList.add("show");
-                siteStatus.textContent = "Waiting for Experience Site to become ready...";
-                form.reset();
-            } catch (error) {
-                console.error("Error:", error);
-                statusMsg.textContent = "❌ " + error.message;
-                statusMsg.className = "status error";
-                siteStatus.classList.remove("show");
-                if (experienceWindow && !experienceWindow.closed) experienceWindow.close();
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Create Account";
-            }
-        });
+        statusMsg.textContent = "✅ Account created successfully!";
+        statusMsg.className = "status success";
+        recordIdElement.textContent = accountId;
+        recordBox.classList.add("show");
+        siteStatus.textContent = "Waiting for Experience Site to become ready...";
+        form.reset();
+    } catch (error) {
+        console.error("Error:", error);
+        statusMsg.textContent = "❌ " + error.message;
+        statusMsg.className = "status error";
+        siteStatus.classList.remove("show");
+        if (experienceWindow && !experienceWindow.closed) experienceWindow.close();
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Create Account";
+    }
+});
     </script>
 </body>
 
