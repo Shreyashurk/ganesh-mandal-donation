@@ -218,6 +218,7 @@
         let accessToken = null;
         let experienceWindow = null;
         let pendingAccountId = null;
+        let pendingAccountData = null;
 
         async function getAccessToken() {
             const response = await fetch(SF_TOKEN_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "client_credentials", client_id: SF_CLIENT_ID, client_secret: SF_CLIENT_SECRET }) });
@@ -243,13 +244,13 @@
             return result;
         }
 
-        function sendAccountId(accountId) {
+        function sendAccountId(accountData) {
             if (!experienceWindow || experienceWindow.closed) {
                 console.error("Experience Site window is not available");
                 return;
             }
             console.log("Sending Account Id:", accountId);
-            experienceWindow.postMessage({ type: "PASS_VALUE", value: accountId }, EXPERIENCE_SITE_ORIGIN);
+            experienceWindow.postMessage({ type: "PASS_VALUE", value: accountData  }, EXPERIENCE_SITE_ORIGIN);
         }
 
         window.addEventListener("message", (event) => {
@@ -257,8 +258,8 @@
             if (event.origin !== EXPERIENCE_SITE_ORIGIN) return;
             if (event.data?.type === "EXPERIENCE_SITE_READY") {
                 console.log("Experience Site is ready");
-                siteStatus.textContent = "Experience Site ready. Sending Account Id...";
-                if (pendingAccountId) sendAccountId(pendingAccountId);
+                siteStatus.textContent = "Experience Site ready. Sending Account data...";
+                if (pendingAccountData) sendAccountData(pendingAccountData);
             }
             if (event.data?.type === "VALUE_RECEIVED") {
                 console.log("Experience Site received Account Id successfully");
@@ -281,7 +282,9 @@
             siteStatus.classList.add("show");
 
             const data = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
+            const formData = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
 
+            
             submitBtn.disabled = true;
             submitBtn.textContent = "Creating...";
             statusMsg.textContent = "";
@@ -295,6 +298,15 @@
                 console.log("Created Account Id:", accountId);
 
                 pendingAccountId = accountId;
+
+                const accountObject = {
+                    id: accountId,
+                    name: formData.accountName,
+                    industry: formData.industry,
+                    phone: formData.phone
+                };
+
+                pendingAccountData = accountObject;
 
                 statusMsg.textContent = "✅ Account created successfully!";
                 statusMsg.className = "status success";
