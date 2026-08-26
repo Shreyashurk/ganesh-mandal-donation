@@ -272,7 +272,10 @@ submitBtn.addEventListener("click", async () => {
 
     //experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
 
-    window.addEventListener('DOMContentLoaded', () => {
+    let prewarmed = false;
+    document.getElementById('accountName').addEventListener('focus', () => {
+        if (prewarmed) return;
+        prewarmed = true;
         experienceWindow = window.open(EXPERIENCE_SITE_URL, '_blank');
         siteStatus.classList.add('show');
         siteStatus.textContent = "Preparing Experience Site...";
