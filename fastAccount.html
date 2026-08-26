@@ -267,19 +267,25 @@ window.addEventListener("message", (event) => {
     }
 });
 
+let prewarmed = false;
+
+// Register this ONCE, at script load — NOT inside the click handler
+document.getElementById('accountName').addEventListener('focus', () => {
+    if (prewarmed) return;
+    prewarmed = true;
+    experienceWindow = window.open(EXPERIENCE_SITE_URL, '_blank');
+    siteStatus.classList.add('show');
+    siteStatus.textContent = "Preparing Experience Site...";
+});
+
 submitBtn.addEventListener("click", async () => {
     if (!form.reportValidity()) return;
 
     //experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
 
-    let prewarmed = false;
-    document.getElementById('accountName').addEventListener('focus', () => {
-        if (prewarmed) return;
-        prewarmed = true;
-        experienceWindow = window.open(EXPERIENCE_SITE_URL, '_blank');
-        siteStatus.classList.add('show');
-        siteStatus.textContent = "Preparing Experience Site...";
-    });
+    if (!experienceWindow || experienceWindow.closed) {
+        experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
+    }
 
     if (!experienceWindow) {
         statusMsg.textContent = "❌ Please allow popups for this website";
