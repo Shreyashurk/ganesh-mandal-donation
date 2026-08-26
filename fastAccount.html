@@ -270,7 +270,13 @@ window.addEventListener("message", (event) => {
 submitBtn.addEventListener("click", async () => {
     if (!form.reportValidity()) return;
 
-    experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
+    //experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
+
+    window.addEventListener('DOMContentLoaded', () => {
+        experienceWindow = window.open(EXPERIENCE_SITE_URL, '_blank');
+        siteStatus.classList.add('show');
+        siteStatus.textContent = "Preparing Experience Site...";
+    });
 
     if (!experienceWindow) {
         statusMsg.textContent = "❌ Please allow popups for this website";
